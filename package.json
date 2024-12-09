@@ -1,10 +1,13 @@
 {
-  "name": "mon-projet-ip",
+  "name": "ip-mask-visualizer",
   "version": "1.0.0",
   "main": "index.js",
+  "homepage": "https://manastria.github.io/ip-mask-visualizer",
   "scripts": {
     "start": "webpack serve --mode development --open",
-    "build": "webpack --mode production"
+    "build": "webpack --mode production",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d build"
   },
   "keywords": [],
   "author": "",

@@ -1,0 +1,30 @@
+/* Classes pour les bits individuels */
+.bit-default {
+    @apply bg-white hover:bg-gray-100;
+  }
+  
+  .bit-network {
+    @apply bg-blue-100 hover:bg-blue-200;
+  }
+  
+  .bit-host {
+    @apply bg-green-100 hover:bg-green-200;
+  }
+  
+  .bit-subnet {
+    @apply bg-yellow-100 hover:bg-yellow-200;
+  }
+  
+  /* Classes pour les bits sélectionnés */
+  .bit-selected {
+    @apply ring-2 ring-blue-500;
+  }
+  
+  /* Classes pour les octets */
+  .octet-network {
+    @apply bg-blue-50;
+  }
+  
+  .octet-host {
+    @apply bg-green-50;
+  }

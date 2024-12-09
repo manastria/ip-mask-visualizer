@@ -1,5 +1,6 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+const BrowserSyncPlugin = require('browser-sync-webpack-plugin');
 
 module.exports = {
   entry: './src/index.js',
@@ -27,12 +28,24 @@ module.exports = {
     new HtmlWebpackPlugin({
       template: './public/index.html',
     }),
+    new BrowserSyncPlugin(
+      {
+        host: 'localhost',
+        port: 3000,
+        proxy: 'http://localhost:3100/', // Remplacez par votre serveur Webpack intégré
+        open: false,
+        notify: false,
+      },
+      {
+        reload: true,
+      }
+    ),
   ],
   devServer: {
     static: {
       directory: path.join(__dirname, 'public'),
     },
-    port: 3000,
+    port: 3100, // Un port différent pour éviter les conflits
     hot: true,
   },
 };

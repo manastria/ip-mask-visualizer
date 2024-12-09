@@ -1,6 +1,17 @@
 import React, { useState, useEffect } from 'react';
 
+
+/**
+ * Represents a range of bits with associated metadata.
+ */
 class BitRange {
+  /**
+   * Creates an instance of BitRange.
+   * @param {number} start - The position of the first bit (1-32).
+   * @param {number} end - The position of the last bit (1-32).
+   * @param {string} cssClass - The CSS class to apply.
+   * @param {string} label - The description of the range.
+   */
   constructor(start, end, cssClass, label) {
     this.start = start;      // Position du premier bit (1-32)
     this.end = end;          // Position du dernier bit (1-32)
@@ -87,15 +98,45 @@ const Octet = ({
   octetIndex, 
   bitRanges,
   paintMode,
-  selectedColor 
+  selectedColor,
+  isMask = false // Ajout du paramètre pour identifier si c'est un masque
 }) => {
   const bits = value.toString(2).padStart(8, '0').split('');
   
   const handleBitChange = (index) => {
-    const newBits = [...bits];
-    newBits[index] = newBits[index] === '1' ? '0' : '1';
-    const newValue = parseInt(newBits.join(''), 2);
-    onChange(newValue);
+    if (isMask) {
+      // Logique spéciale pour le masque
+      const bitPosition = octetIndex * 8 + index; // Position globale du bit (0-31)
+      const totalBits = 32;
+      
+      // Créer un tableau de 32 bits représentant tout le masque
+      const currentValue = parseInt(value).toString(2).padStart(8, '0');
+      const allBits = new Array(totalBits).fill('0');
+      // Remplir avec les bits actuels de l'octet
+      for (let i = 0; i < 8; i++) {
+        allBits[octetIndex * 8 + i] = currentValue[i];
+      }
+      
+      // Mettre à 1 tous les bits à gauche de la position cliquée
+      for (let i = 0; i <= bitPosition; i++) {
+        allBits[i] = '1';
+      }
+      // Mettre à 0 tous les bits à droite de la position cliquée
+      for (let i = bitPosition + 1; i < totalBits; i++) {
+        allBits[i] = '0';
+      }
+      
+      // Extraire les 8 bits correspondant à cet octet
+      const newOctetBits = allBits.slice(octetIndex * 8, (octetIndex + 1) * 8);
+      const newValue = parseInt(newOctetBits.join(''), 2);
+      onChange(newValue);
+    } else {
+      // Comportement normal pour les autres octets
+      const newBits = [...bits];
+      newBits[index] = newBits[index] === '1' ? '0' : '1';
+      const newValue = parseInt(newBits.join(''), 2);
+      onChange(newValue);
+    }
   };
 
   return (
@@ -138,6 +179,8 @@ const availableColors = [
   { name: 'Aucune', class: 'bg-white hover:bg-gray-100' }
 ];
 
+
+// Affiche l'adresse IP
 const IPDisplay = ({ 
   title,
   initialIP = '192.168.1.1',
@@ -147,13 +190,28 @@ const IPDisplay = ({
   paintMode = false,
   selectedColor,
   onColorChange,
-  isMask = false  // Nouveau paramètre pour identifier si c'est le masque
+  isMask = false
 }) => {
   const [octets, setOctets] = useState(initialIP.split('.').map(n => parseInt(n)));
   
   const handleOctetChange = (index, newValue) => {
     const newOctets = [...octets];
     newOctets[index] = newValue;
+    
+    // Si c'est un masque et qu'un octet change, appliquer la logique du masque à tous les octets
+    if (isMask) {
+      const bitPosition = index * 8 + 7; // Position du dernier bit de l'octet
+      
+      // Mettre à 1 tous les octets à gauche
+      for (let i = 0; i < index; i++) {
+        newOctets[i] = 255;
+      }
+      // Mettre à 0 tous les octets à droite
+      for (let i = index + 1; i < 4; i++) {
+        newOctets[i] = 0;
+      }
+    }
+    
     setOctets(newOctets);
     onIPChange?.(newOctets.join('.'));
   };
@@ -188,6 +246,7 @@ const IPDisplay = ({
               bitRanges={bitRanges}
               paintMode={paintMode}
               selectedColor={selectedColor}
+              isMask={isMask}
             />
             {octetIndex < 3 && <span className="text-xl">.</span>}
           </React.Fragment>
@@ -210,6 +269,7 @@ const IPDisplay = ({
     </div>
   );
 };
+
 
 // Composant principal qui gère le masque et l'adresse IP
 const IPMaskDisplay = () => {

@@ -172,10 +172,10 @@ const Octet = ({
 
 // Définition des couleurs disponibles
 const availableColors = [
-  { name: 'Réseau', class: 'bg-blue-100 hover:bg-blue-200' },
-  { name: 'Sous-réseau', class: 'bg-yellow-100 hover:bg-yellow-200' },
-  { name: 'Hôte', class: 'bg-green-100 hover:bg-green-200' },
-  { name: 'Spécial', class: 'bg-purple-100 hover:bg-purple-200' },
+  { name: 'Réseau', class: 'bg-blue-300 hover:bg-blue-400' },     // Plus foncé
+  { name: 'Sous-réseau', class: 'bg-yellow-300 hover:bg-yellow-400' }, // Plus foncé
+  { name: 'Hôte', class: 'bg-green-300 hover:bg-green-400' },     // Plus foncé
+  { name: 'Spécial', class: 'bg-purple-300 hover:bg-purple-400' }, // Plus foncé
   { name: 'Aucune', class: 'bg-white hover:bg-gray-100' }
 ];
 
@@ -190,7 +190,11 @@ const IPDisplay = ({
   paintMode = false,
   selectedColor,
   onColorChange,
-  isMask = false
+  isMask = false,
+  isPad = false,
+  sourceIP = null,
+  sourceBitRanges = null,
+  mask = null
 }) => {
   const [octets, setOctets] = useState(initialIP.split('.').map(n => parseInt(n)));
   
@@ -216,6 +220,32 @@ const IPDisplay = ({
     onIPChange?.(newOctets.join('.'));
   };
 
+  const setNetworkAddress = () => {
+    if (mask) {
+      const maskParts = mask.split('.').map(n => parseInt(n));
+      const newOctets = octets.map((octet, i) => octet & maskParts[i]);
+      setOctets(newOctets);
+      onIPChange?.(newOctets.join('.'));
+    }
+  };
+  
+  const setBroadcastAddress = () => {
+    if (mask) {
+      const maskParts = mask.split('.').map(n => parseInt(n));
+      const newOctets = octets.map((octet, i) => octet | (~maskParts[i] & 255));
+      setOctets(newOctets);
+      onIPChange?.(newOctets.join('.'));
+    }
+  };
+  
+  const copySourceIP = () => {
+    if (sourceIP) {
+      const newOctets = sourceIP.split('.').map(n => parseInt(n));
+      setOctets(newOctets);
+      onIPChange?.(sourceIP);
+    }
+  };
+
   return (
     <div className="flex flex-col items-center p-4">
       {title && <h3 className="text-lg font-semibold mb-2">{title}</h3>}
@@ -234,7 +264,7 @@ const IPDisplay = ({
         className="mb-4 px-2 py-1 border border-gray-300 rounded"
       />
       
-      <div className="flex items-center space-x-1">
+      <div className="flex items-ends space-x-1">
         {octets.map((octet, octetIndex) => (
           <React.Fragment key={octetIndex}>
             <Octet
@@ -248,10 +278,41 @@ const IPDisplay = ({
               selectedColor={selectedColor}
               isMask={isMask}
             />
-            {octetIndex < 3 && <span className="text-xl">.</span>}
+            {octetIndex < 3 && (
+              <span className="flex items-end pb-2 text-base text-gray-400">&bull;</span>
+            )}
           </React.Fragment>
         ))}
       </div>
+
+      {isPad && (
+        <div className="mt-4 flex space-x-2">
+          <button 
+            onClick={setNetworkAddress}
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            Adresse réseau
+          </button>
+          <button 
+            onClick={setBroadcastAddress}
+            className="px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600"
+          >
+            Adresse broadcast
+          </button>
+          <button 
+            onClick={copySourceIP}
+            className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+          >
+            Copier IP source
+          </button>
+          <button 
+            onClick={() => onColorChange?.(sourceBitRanges)}
+            className="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600"
+          >
+            Copier couleurs
+          </button>
+        </div>
+      )}
 
       {showLegend && bitRanges.length > 0 && (
         <div className="mt-4 text-sm">
@@ -279,6 +340,8 @@ const IPMaskDisplay = () => {
   const [customMaskRanges, setCustomMaskRanges] = useState([]);
   const [paintMode, setPaintMode] = useState(false);
   const [selectedColor, setSelectedColor] = useState(availableColors[0]);
+  const [padIP, setPadIP] = useState('192.168.1.1');
+  const [customPadRanges, setCustomPadRanges] = useState([]);
 
   // Calculer les plages basées sur le masque
   const maskRanges = getMaskRanges(mask);
@@ -324,6 +387,17 @@ const IPMaskDisplay = () => {
       return [...updatedRanges, ...customRanges];
     });
   }, [mask]); // Se déclenche quand le masque change
+
+  // Fonction pour copier les couleurs de l'adresse IP
+  const handleCopyColors = (sourceBitRanges) => {
+    const setTargetRanges = setCustomPadRanges;
+    setTargetRanges(sourceBitRanges.map(range => new BitRange(
+      range.start,
+      range.end,
+      range.cssClass,
+      range.label
+    )));
+  };
 
   // Fonction pour mettre à jour la couleur d'un bit
   const handleColorChange = (bitPosition, color, isMask) => {
@@ -453,6 +527,20 @@ const IPMaskDisplay = () => {
         selectedColor={selectedColor}
         onColorChange={(pos, color) => handleColorChange(pos, color, false)}
         isMask={false}
+      />
+
+      <IPDisplay
+        title="Adresse de travail"
+        initialIP={padIP}
+        onIPChange={setPadIP}
+        bitRanges={customPadRanges}
+        paintMode={paintMode}
+        selectedColor={selectedColor}
+        onColorChange={handleCopyColors}  // Modification ici
+        isPad={true}
+        sourceIP={ip}
+        sourceBitRanges={customIPRanges}
+        mask={mask}
       />
 
       <div className="mt-8 p-4 bg-gray-50 rounded">
